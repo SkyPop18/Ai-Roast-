@@ -349,10 +349,4 @@ License not specified.
    ```
 5. **Open a Pull Request** explaining the changes made.
 
-# Credits
 
-* **Google Gemini AI API:** Intelligence layer.
-* **Framer Motion:** Smooth cards and typewriter animations.
-* **html2canvas:** Roast card snapshot downloading.
-* **canvas-confetti:** Scoring celebration confetti.
-* **Lucide React:** Iconography.
