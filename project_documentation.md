@@ -132,3 +132,29 @@ To prevent abuse, daily limits are applied dynamically based on the resource int
 
 ---
 
+## 🚀 Production Deployment (Split Hosting)
+
+To deploy the application securely and maintain backend API key safety, a **split-hosting architecture** is implemented:
+
+### 1. Backend Server Deployment (Render)
+The backend is a Node.js Express server. It handles limits, analytics updates, caching, and Gemini API proxy calls.
+- **Hosting Provider:** Render (or Fly.io / Railway).
+- **Build Command:** `npm install` (No build script needed for backend JavaScript).
+- **Start Command:** `node server/index.js`
+- **Environment Settings:**
+  - `GEMINI_API_KEY`: A valid Google AI Studio key starting with `AIzaSy`.
+  - `NODE_ENV`: `production`
+  - `APP_MODE`: `production`
+  - `ALLOWED_ORIGINS`: Set to the address of your Netlify frontend (e.g., `https://your-app.netlify.app`) to handle cross-origin requests.
+
+### 2. Frontend React Deployment (Netlify)
+The frontend is a React application built with Vite. It needs to be compiled to static HTML, CSS, and JS assets.
+- **Hosting Provider:** Netlify (or Vercel / GitHub Pages).
+- **Build Command:** `npm run build`
+- **Publish Directory:** `dist`
+- **Environment Settings:**
+  - `VITE_API_URL`: Set to the Render server URL (e.g. `https://your-backend-api.onrender.com` without a trailing `/`).
+  - During the build phase, Vite replaces occurrences of `import.meta.env.VITE_API_URL` with this backend URL, pointing all API calls directly to the Render server.
+
+---
+
