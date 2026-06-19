@@ -175,21 +175,58 @@ npm run dev
   * Client: `vite` (proxied on `http://localhost:5173`)
   * Server: `node --watch server/index.js` (listening on `http://localhost:3001`)
 
-### Production Mode
+### Production Mode (Local Running)
 
-To run in production mode, compile the client code into optimized static files first, then launch the Express server:
+To compile and run the full stack locally in production mode:
 
 1. **Build the production bundle:**
    ```bash
    npm run build
    ```
-   *Runs `tsc -b && vite build` to typecheck and compile assets into the `dist/` directory.*
+   *Runs `tsc -b && vite build` to compile the frontend assets into the `dist/` directory.*
 
 2. **Start the backend server:**
    ```bash
    npm run start
    ```
-   *Runs `node server/index.js` which serves endpoints and executes business logic.*
+   *Runs `node server/index.js` which boots up the Express API server.*
+
+---
+
+# Production Deployment
+
+For full production deployment, the application uses a **split architecture**:
+- **Frontend:** Hosted on **Netlify** (or Vercel) as static assets.
+- **Backend:** Hosted on **Render** (or Fly.io) as a persistent Node.js service.
+
+### 1. Deploy the Backend API (Render)
+
+Since the backend tracks rate limits and usage statistics in-memory and via `stats.json`, a persistent Node.js host is required:
+
+1. Create a new **Web Service** on Render and link your GitHub repository.
+2. Set the following build settings:
+   - **Runtime:** `Node`
+   - **Build Command:** `npm install` (Do **not** run `npm run build` here, as Render only runs the backend and does not need to build the React client)
+   - **Start Command:** `node server/index.js`
+3. Add the following **Environment Variables** in Render:
+   - `GEMINI_API_KEY`: Your Google AI Studio API key (must start with `AIzaSy`).
+   - `NODE_ENV`: `production`
+   - `APP_MODE`: `production` (enables rate limiting and daily usage checks).
+   - `ALLOWED_ORIGINS`: Your frontend Netlify URL (e.g., `https://your-app.netlify.app`), allowing cross-origin CORS requests.
+4. Deploy the service and copy the provided web service URL (e.g., `https://your-backend.onrender.com`).
+
+### 2. Deploy the Frontend UI (Netlify)
+
+1. Create a new site on Netlify and link the same GitHub repository.
+2. Set the following build settings:
+   - **Base directory:** (Leave empty / Root)
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist`
+3. Add the following **Environment Variable** in Netlify:
+   - `VITE_API_URL`: The URL of your deployed Render backend (e.g., `https://your-backend.onrender.com` — do not add a trailing slash `/`).
+4. Trigger a deploy. Netlify will build the frontend and embed the backend URL into the compiled bundle.
+
+---
 
 # API Endpoints
 
@@ -349,4 +386,10 @@ License not specified.
    ```
 5. **Open a Pull Request** explaining the changes made.
 
+# Credits
 
+* **Google Gemini AI API:** Intelligence layer.
+* **Framer Motion:** Smooth cards and typewriter animations.
+* **html2canvas:** Roast card snapshot downloading.
+* **canvas-confetti:** Scoring celebration confetti.
+* **Lucide React:** Iconography.
