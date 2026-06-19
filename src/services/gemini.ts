@@ -24,8 +24,10 @@ export interface RoastResponse {
 
 export const DAILY_LIMIT = 3;
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export async function generateRoast(req: RoastRequest): Promise<RoastResponse> {
-  const response = await fetch('/api/roast', {
+  const response = await fetch(`${API_BASE}/api/roast`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
@@ -45,7 +47,7 @@ export async function generateRoast(req: RoastRequest): Promise<RoastResponse> {
 
 export async function fetchUsage(): Promise<{ count: number; appMode?: string }> {
   try {
-    const res = await fetch('/api/usage');
+    const res = await fetch(`${API_BASE}/api/usage`);
     if (!res.ok) throw new Error('usage check failed');
     return res.json();
   } catch {
@@ -60,7 +62,7 @@ export async function fetchStats(): Promise<{
   todaysVictims: number;
 }> {
   try {
-    const res = await fetch('/api/stats');
+    const res = await fetch(`${API_BASE}/api/stats`);
     if (!res.ok) throw new Error('Stats fetch failed');
     return res.json();
   } catch {
