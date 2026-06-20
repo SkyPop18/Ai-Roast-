@@ -267,8 +267,40 @@ ABSOLUTE RULES (never break these):
 User's roast request:
 ${input}`;
 }
+// ── IP Extraction ─────────────────────────────────────────────────────────────
+/**
+ * Reliably extract the real client IP from behind reverse proxies.
+ * Checks headers in order: CF-Connecting-IP, X-Real-IP, X-Forwarded-For, then
+ * falls back to req.ip / socket address.  Handles comma-separated X-Forwarded-For
+ * lists by taking the LEFT-MOST (original client) entry.
+ */
+function getClientIp(req) {
+  // Cloudflare always sets this to the true visitor IP
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (cfIp && typeof cfIp === 'string') return cfIp.trim();
+
+  // Nginx / other proxies
+  const realIp = req.headers['x-real-ip'];
+  if (realIp && typeof realIp === 'string') return realIp.trim();
+
+  // Standard: X-Forwarded-For can be "client, proxy1, proxy2"
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) {
+    const raw = Array.isArray(xff) ? xff[0] : xff;
+    const first = raw.split(',')[0].trim();
+    if (first) return first;
+  }
+
+  // Express req.ip (respects trust proxy)
+  if (req.ip && req.ip !== '::1' && req.ip !== '::ffff:127.0.0.1') return req.ip;
+
+  // Final fallback
+  return req.socket?.remoteAddress || '0.0.0.0';
+}
+
 // ── App Setup ─────────────────────────────────────────────────────────────────
 const app = express();
+app.set('trust proxy', true); // Trust the full proxy chain so req.ip / X-Forwarded-For are populated
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
@@ -288,6 +320,7 @@ const roastLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
   message: { error: 'Too many requests. Please wait a few minutes and try again.' },
   skip: () => APP_MODE !== 'production',
 });
@@ -331,15 +364,17 @@ app.get('/api/stats', (_req, res) => {
   });
 });
 app.get('/api/usage', (req, res) => {
-  const ip = req.ip || req.socket?.remoteAddress || '0.0.0.0';
+  const ip = getClientIp(req);
   const count = dailyUsage.get(getUsageKey(ip)) || 0;
+  console.log(`[usage] IP=${ip} count=${count} key=${getUsageKey(ip)}`);
   res.json({
     count,
     appMode: APP_MODE
   });
 });
 app.post('/api/roast', roastLimiter, async (req, res) => {
-  const ip = req.ip || req.socket?.remoteAddress || '0.0.0.0';
+  const ip = getClientIp(req);
+  console.log(`[roast] Resolved IP=${ip} | xff=${req.headers['x-forwarded-for'] || 'none'} | cf=${req.headers['cf-connecting-ip'] || 'none'} | req.ip=${req.ip}`);
   const { input, category, style, length, intensity } = req.body;
 
   if (!input || typeof input !== 'string') {
